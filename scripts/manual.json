@@ -1,0 +1,6 @@
+{
+  "_help": "Handmatige correcties. hide_urls: bronlinks die je van de site wilt halen (bijv. een fout-positief). add_threats / add_vetoes: items die je zelf wilt toevoegen, in hetzelfde formaat als in docs/data.json.",
+  "hide_urls": [],
+  "add_threats": [],
+  "add_vetoes": []
+}

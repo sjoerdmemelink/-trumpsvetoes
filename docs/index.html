@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trump’s Vetoes: a running count since November 4, 2026</title>
+<meta name="description" content="A satirical running count of President Trump’s formal vetoes since the 2026 midterms, plus every veto threat on the record. Updated daily from official sources.">
+<meta property="og:title" content="Trump’s Vetoes">
+<meta property="og:description" content="A running count of formal vetoes since the 2026 midterms. Updated daily.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%96%8B%3C/text%3E%3C/svg%3E">
+<style>
+  @font-face {
+    font-family: "Anton";
+    src: url("fonts/anton-latin-400-normal.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  :root {
+    --paper: #e7edf2;
+    --sheet: #f8fafb;
+    --ink: #101b2d;
+    --muted: #55637a;
+    --rule: #b7c3cf;
+    --stamp: #b3122b;
+    --stamp-soft: #f6d9de;
+    --tally: #f2c230;
+    --tally-ink: #3a2c00;
+    --link: #0b4f9c;
+    --display: "Anton", "Haettenschweiler", "Impact", "Arial Narrow Bold", sans-serif;
+    --body: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  :root[data-theme="dark"] {
+    --paper: #0d1522;
+    --sheet: #17212f;
+    --ink: #eef2f6;
+    --muted: #9aa8bb;
+    --rule: #2c3a4e;
+    --stamp: #ff5a70;
+    --stamp-soft: #3a1b24;
+    --tally: #f2c230;
+    --tally-ink: #3a2c00;
+    --link: #8dbcff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0d1522;
+      --sheet: #17212f;
+      --ink: #eef2f6;
+      --muted: #9aa8bb;
+      --rule: #2c3a4e;
+      --stamp: #ff5a70;
+      --stamp-soft: #3a1b24;
+      --tally: #f2c230;
+      --tally-ink: #3a2c00;
+      --link: #8dbcff;
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 1.0625rem;
+    line-height: 1.6;
+  }
+  a { color: var(--link); text-underline-offset: 0.18em; }
+  a:focus-visible, button:focus-visible, .btn:focus-visible {
+    outline: 3px solid var(--stamp);
+    outline-offset: 3px;
+  }
+  .wrap { max-width: 64rem; margin: 0 auto; padding: 0 1.25rem; }
+
+  /* ---------- Header ---------- */
+  header.top { padding: 1.5rem 0 0; }
+  .site-name {
+    font-family: var(--ui);
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 2rem 0 3rem; }
+  h1 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(2.6rem, 8vw, 5.2rem);
+    line-height: 0.95;
+    margin: 0 0 1rem;
+    max-width: 14ch;
+    letter-spacing: 0.005em;
+  }
+  .lede { max-width: 34rem; color: var(--muted); margin: 0 0 2.5rem; font-size: 1.125rem; }
+
+  .stage {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (max-width: 760px) { .stage { grid-template-columns: 1fr; } }
+
+  .bill {
+    position: relative;
+    background: var(--sheet);
+    border: 1px solid var(--rule);
+    padding: 1.5rem 1.5rem 1.25rem;
+    transform: rotate(-0.8deg);
+    box-shadow: 0 1px 0 var(--rule), 0 14px 30px -18px rgba(16, 27, 45, 0.45);
+    overflow: hidden;
+  }
+  .bill-head {
+    font-family: var(--ui);
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin: 0;
+    max-width: 18rem;
+  }
+  .count {
+    font-family: var(--display);
+    font-size: clamp(8rem, 26vw, 15rem);
+    line-height: 0.82;
+    margin: 1.1rem 0 0.9rem;
+    letter-spacing: 0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+  .count-note { font-family: var(--ui); font-size: 0.95rem; color: var(--muted); margin: 0; max-width: 24rem; }
+
+  /* abstract text lines on the bill */
+  .bill-lines { display: grid; gap: 0.45rem; opacity: 0.55; margin-top: 1.4rem; }
+  .bill-lines i { display: block; height: 0.42rem; background: var(--rule); border-radius: 2px; }
+  .bill-lines i:nth-child(1) { width: 92%; }
+  .bill-lines i:nth-child(2) { width: 78%; }
+  .bill-lines i:nth-child(3) { width: 55%; }
+
+  /* the stamp */
+  .stamp-scene { position: absolute; right: -0.5rem; top: -0.25rem; width: min(17rem, 52%); pointer-events: none; }
+  .stamp-scene svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .imprint { opacity: 0; transform-origin: 50% 50%; }
+  .tool { transform-origin: 50% 100%; }
+
+  /* zero state: the stamp rests, nothing to stamp yet */
+  .is-zero .tool { transform: translate(0, -6%) rotate(-6deg); }
+  .is-zero .imprint { display: none; }
+
+  /* count > 0: the stamp comes down once, then the imprint stays */
+  .has-count .tool { animation: slam 1.1s cubic-bezier(.3,.1,.3,1) 0.35s both; }
+  .has-count .imprint { animation: thud 0.45s cubic-bezier(.2,.9,.3,1.2) 0.75s both; }
+  @keyframes slam {
+    0%   { transform: translate(8%, -90%) rotate(-12deg); }
+    38%  { transform: translate(0, 4%) rotate(-4deg); }
+    48%  { transform: translate(0, 0) rotate(-4deg); }
+    100% { transform: translate(6%, -70%) rotate(-10deg); opacity: 0.0; }
+  }
+  @keyframes thud {
+    0%   { opacity: 0; transform: scale(1.35) rotate(-9deg); }
+    100% { opacity: 0.92; transform: scale(1) rotate(-9deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .has-count .tool { animation: none; opacity: 0; }
+    .has-count .imprint { animation: none; opacity: 0.92; transform: rotate(-9deg); }
+  }
+
+  @media (max-width: 560px) {
+    .bill-head { max-width: 10.5rem; }
+    .stamp-scene { width: 38%; right: 0; }
+  }
+
+  /* threats note */
+  .note {
+    background: var(--tally);
+    color: var(--tally-ink);
+    padding: 1.1rem 1.2rem 1.2rem;
+    transform: rotate(1.4deg);
+    box-shadow: 0 12px 24px -16px rgba(16, 27, 45, 0.6);
+    font-family: var(--ui);
+    align-self: start;
+    margin-top: 1.5rem;
+  }
+  .note .n { font-family: var(--display); font-size: clamp(4rem, 12vw, 6rem); line-height: 0.9; margin: 0; }
+  .note p { margin: 0.35rem 0 0; font-size: 0.95rem; line-height: 1.45; }
+  .note strong { font-weight: 700; }
+
+  .meta { font-family: var(--ui); font-size: 0.875rem; color: var(--muted); margin: 2.25rem 0 0; }
+
+  /* ---------- Logs ---------- */
+  section.block { padding: 2.5rem 0; border-top: 1px solid var(--rule); }
+  h2 { font-family: var(--display); font-weight: 400; font-size: clamp(1.9rem, 5vw, 2.7rem); line-height: 1; margin: 0 0 0.4rem; }
+  .sub { color: var(--muted); margin: 0 0 1.5rem; max-width: 40rem; }
+
+  .log { list-style: none; margin: 0; padding: 0; }
+  .log li {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    gap: 0.25rem 1.25rem;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .log .when { font-family: var(--ui); font-size: 0.9rem; color: var(--muted); padding-top: 0.15rem; }
+  .log .what { margin: 0; }
+  .log .what b { font-weight: 700; }
+  .log .status { display: block; font-family: var(--ui); font-size: 0.9rem; color: var(--muted); margin-top: 0.2rem; }
+  .log blockquote { margin: 0.2rem 0 0.3rem; padding-left: 0.9rem; border-left: 3px solid var(--stamp); }
+  @media (max-width: 560px) { .log li { grid-template-columns: 1fr; } }
+
+  .empty {
+    background: var(--sheet);
+    border: 1px dashed var(--rule);
+    padding: 1.25rem 1.4rem;
+    margin: 0;
+    max-width: 40rem;
+  }
+
+  .two { display: grid; grid-template-columns: 1fr; gap: 2.5rem; }
+  .tag {
+    display: inline-block;
+    font-family: var(--ui);
+    font-size: 0.8rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: var(--stamp-soft);
+    color: var(--stamp);
+    margin-right: 0.4rem;
+    vertical-align: 0.1em;
+  }
+
+  .prehistory { background: var(--sheet); border-left: 4px solid var(--stamp); padding: 1rem 1.25rem; max-width: 42rem; margin: 0; }
+
+  /* ---------- Donate ---------- */
+  .donate {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1.5rem 2rem;
+    align-items: center;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 1.75rem 1.75rem;
+    transform: rotate(-0.4deg);
+  }
+  :root[data-theme="dark"] .donate { background: var(--sheet); color: var(--ink); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .donate { background: var(--sheet); color: var(--ink); } }
+  .donate h2 { margin-bottom: 0.5rem; }
+  .donate p { margin: 0; max-width: 34rem; }
+  .donate small { display: block; margin-top: 0.6rem; font-family: var(--ui); font-size: 0.85rem; opacity: 0.8; }
+  .btn {
+    display: inline-block;
+    font-family: var(--ui);
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-decoration: none;
+    background: var(--stamp);
+    color: #fff;
+    padding: 0.95rem 1.5rem;
+    border-radius: 4px;
+    border: 2px solid var(--stamp);
+    white-space: nowrap;
+  }
+  .btn:hover { background: transparent; color: var(--stamp); }
+  :root:not([data-theme="light"]) .btn:hover { background: transparent; }
+  @media (max-width: 640px) { .donate { grid-template-columns: 1fr; } .btn { justify-self: start; } }
+
+  /* ---------- Footer ---------- */
+  footer { padding: 2.5rem 0 4rem; border-top: 1px solid var(--rule); font-family: var(--ui); font-size: 0.9rem; color: var(--muted); }
+  footer p { max-width: 46rem; margin: 0 0 0.9rem; }
+  footer ul { margin: 0 0 1rem; padding-left: 1.1rem; }
+  .err { color: var(--stamp); font-family: var(--ui); }
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap"><p class="site-name">trumpsvetoes.com</p></div></header>
+
+<main>
+  <div class="wrap">
+    <section class="hero" aria-labelledby="title">
+      <h1 id="title">Trump’s vetoes, counted.</h1>
+      <p class="lede">Every bill the President formally vetoes from November 4, 2026, the day after the midterms. Checked daily against official records.</p>
+
+      <div class="stage" id="stage">
+        <div class="bill" id="bill">
+          <p class="bill-head">Bills formally vetoed since November 4, 2026</p>
+          <p class="count" id="count" aria-live="polite">–</p>
+          <p class="count-note" id="count-note">Loading the latest numbers…</p>
+          <div class="bill-lines" aria-hidden="true"><i></i><i></i><i></i></div>
+
+          <div class="stamp-scene" aria-hidden="true">
+            <svg viewBox="0 0 260 300" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="n"/>
+                  <feDisplacementMap in="SourceGraphic" in2="n" scale="3.2"/>
+                </filter>
+                <mask id="worn">
+                  <rect width="260" height="300" fill="#fff"/>
+                  <filter id="speck"><feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="1" seed="9"/><feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -4 2.1"/></filter>
+                  <rect width="260" height="300" filter="url(#speck)" fill="#000" opacity="0.35"/>
+                </mask>
+              </defs>
+
+              <!-- imprint -->
+              <g class="imprint" style="transform-box: fill-box;">
+                <g filter="url(#rough)" mask="url(#worn)" fill="none" stroke="var(--stamp)">
+                  <rect x="28" y="168" width="204" height="86" rx="6" stroke-width="7"/>
+                  <rect x="38" y="178" width="184" height="66" rx="3" stroke-width="2"/>
+                  <text x="130" y="236" text-anchor="middle" font-family="Anton, Haettenschweiler, Impact, 'Arial Narrow Bold', sans-serif" font-size="76" fill="var(--stamp)" stroke="none" textLength="168" lengthAdjust="spacingAndGlyphs">VETO</text>
+                </g>
+              </g>
+
+              <!-- the stamp tool -->
+              <g class="tool" style="transform-box: fill-box;">
+                <rect x="105" y="6" width="50" height="22" rx="11" fill="#2b3a55"/>
+                <rect x="116" y="24" width="28" height="74" rx="4" fill="#3b4d6e"/>
+                <rect x="60" y="94" width="140" height="22" rx="4" fill="#2b3a55"/>
+                <rect x="52" y="112" width="156" height="30" rx="5" fill="#b3122b"/>
+                <rect x="52" y="136" width="156" height="6" rx="3" fill="#7e0c1e"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <aside class="note" aria-label="Veto threats">
+          <p class="n" id="threat-count">–</p>
+          <p><strong>veto threats on the record</strong> from Trump’s own posts and official statements. Headlines from the news are listed below but not counted.</p>
+        </aside>
+      </div>
+
+      <p class="meta" id="meta"></p>
+    </section>
+  </div>
+
+  <div class="wrap">
+    <section class="block" aria-labelledby="h-vetoes">
+      <h2 id="h-vetoes">The veto log</h2>
+      <p class="sub">Formal vetoes, including pocket vetoes, taken from the U.S. Senate’s official record. Each entry shows what happened next.</p>
+      <ul class="log" id="log-vetoes"></ul>
+      <p class="empty" id="empty-vetoes" hidden>Nothing on the log yet. The pen is capped. The count starts on the first official veto after November 4, 2026.</p>
+    </section>
+
+    <section class="block" aria-labelledby="h-threats">
+      <h2 id="h-threats">The threat log</h2>
+      <p class="sub">Talking about a veto isn’t the same as using one, so threats get their own tally. Posts come from an independent archive of Trump’s Truth Social account, and each entry links to its source.</p>
+      <ul class="log" id="log-threats"></ul>
+      <p class="empty" id="empty-threats" hidden>No threats logged since the counter started. Check back tomorrow, since this list updates daily.</p>
+
+      <h3 style="font-family:var(--ui);font-size:1.05rem;margin:2.25rem 0 0.4rem;">In the news</h3>
+      <p class="sub" style="margin-bottom:0.75rem;">Headlines from major outlets about veto threats. Not counted.</p>
+      <ul class="log" id="log-news"></ul>
+      <p class="empty" id="empty-news" hidden>No matching headlines yet.</p>
+    </section>
+
+    <section class="block" aria-labelledby="h-pre">
+      <h2 id="h-pre">Where it started</h2>
+      <p class="prehistory">Late on November 3, 2026, as the midterm results came in, Trump posted a photo of a red cap with the single word “VETO” on Truth Social. Days earlier he had said he would become “Mr. Veto” if Democrats won Congress. This counter starts the next day. <a href="https://www.trumpstruth.org/statuses/43483">See the post in the archive</a>.</p>
+    </section>
+
+    <section class="block" aria-labelledby="h-donate">
+      <div class="donate">
+        <div>
+          <h2 id="h-donate">Keep the counter running</h2>
+          <p>This is an independent hobby project run by one person. Donations pay for the domain name and the time it takes to keep the count accurate.</p>
+          <small>This is not a charity or a political committee. Donations are not tax-deductible.</small>
+        </div>
+        <a class="btn" id="donate-btn" href="#" rel="noopener">Donate on Ko-fi</a>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Satire, with real numbers.</strong> This site is a parody project. It isn’t affiliated with, endorsed by, or connected to Donald Trump, the White House, Congress, or any government body or political campaign. The illustrations are original.</p>
+    <p>How the count works: a veto is counted when it appears on the U.S. Senate’s official list of presidential vetoes, which includes pocket vetoes. A veto threat is counted when it comes from Trump’s own posts, or from an official White House statement that recommends a veto. Headlines are shown separately and don’t change the count. A script checks these sources once a day, so a new entry can take up to a day to appear.</p>
+    <p>Sources:</p>
+    <ul>
+      <li><a href="https://www.senate.gov/legislative/vetoes/TrumpDJ2.htm">U.S. Senate: Vetoes by President Donald J. Trump</a></li>
+      <li><a href="https://www.trumpstruth.org/">Trump’s Truth, an independent archive of Truth Social posts</a></li>
+      <li>Headlines from major news outlets, linked individually</li>
+    </ul>
+    <p id="corrections"></p>
+  </div>
+</footer>
+
+<script>
+  // ---- Settings: replace the Ko-fi link and (optionally) the e-mail address below ----
+  const CONFIG = {
+    donateUrl: "https://ko-fi.com/YOUR_NAME_HERE",
+    correctionsEmail: ""            // e.g. "hello@trumpsvetoes.com"; leave empty to hide the line
+  };
+  // -------------------------------------------------------------------------------------
+
+  const $ = (id) => document.getElementById(id);
+  const fmtDate = (iso) => {
+    const d = new Date(iso + (iso.length === 10 ? "T00:00:00Z" : ""));
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+  };
+  const el = (tag, attrs = {}, kids = []) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "text") n.textContent = v; else n.setAttribute(k, v);
+    }
+    for (const k of [].concat(kids)) n.append(k);
+    return n;
+  };
+  const safeUrl = (u) => (typeof u === "string" && /^https?:\/\//i.test(u)) ? u : null;
+  const link = (text, url) => {
+    const u = safeUrl(url);
+    return u ? el("a", { href: u, rel: "noopener", text }) : document.createTextNode(text);
+  };
+
+  $("donate-btn").href = CONFIG.donateUrl;
+  if (CONFIG.correctionsEmail) {
+    $("corrections").append("Spotted a mistake? ", el("a", { href: "mailto:" + CONFIG.correctionsEmail, text: CONFIG.correctionsEmail }), ".");
+  }
+
+  function render(data) {
+    const params = new URLSearchParams(location.search);
+    const demo = parseInt(params.get("demo"), 10);       // ?demo=3 previews the stamp animation
+    const vetoes = Array.isArray(data.vetoes) ? data.vetoes : [];
+    const threats = Array.isArray(data.threats) ? data.threats : [];
+    const news = Array.isArray(data.news) ? data.news : [];
+    const count = Number.isFinite(demo) ? demo : vetoes.length;
+
+    $("count").textContent = String(count);
+    $("stage").classList.add(count > 0 ? "has-count" : "is-zero");
+    $("count-note").textContent = count === 0
+      ? "Zero so far. The pen is capped."
+      : count === 1 ? "One and counting." : "And counting.";
+    $("threat-count").textContent = String(threats.length);
+
+    const since = data.start_date ? fmtDate(data.start_date) : "November 4, 2026";
+    const upd = data.updated_at ? new Date(data.updated_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }) + " UTC" : "unknown";
+    $("meta").textContent = "Counting from " + since + ". Last checked: " + upd + ".";
+
+    // vetoes
+    const lv = $("log-vetoes");
+    lv.replaceChildren();
+    for (const v of vetoes) {
+      const what = el("p", { class: "what" }, [
+        el("b", { text: v.bill || "Bill" }), document.createTextNode(" "),
+        link(v.subject || "", v.url)
+      ]);
+      if (v.status) what.append(el("span", { class: "status", text: v.status }));
+      lv.append(el("li", {}, [el("div", { class: "when", text: fmtDate(v.date) }), what]));
+    }
+    $("empty-vetoes").hidden = vetoes.length > 0;
+
+    // threats
+    const lt = $("log-threats");
+    lt.replaceChildren();
+    const label = { truth: "Truth Social", sap: "White House statement", speech: "Remarks" };
+    for (const t of threats) {
+      const what = el("div", { class: "what" }, [
+        el("span", { class: "tag", text: label[t.source] || "Statement" }),
+        el("blockquote", { text: t.text || "" }),
+        link("Source", t.url)
+      ]);
+      lt.append(el("li", {}, [el("div", { class: "when", text: fmtDate(t.date) }), what]));
+    }
+    $("empty-threats").hidden = threats.length > 0;
+
+    // news
+    const ln = $("log-news");
+    ln.replaceChildren();
+    for (const n of news) {
+      const what = el("p", { class: "what" }, [link(n.title || "Headline", n.url)]);
+      if (n.outlet) what.append(el("span", { class: "status", text: n.outlet }));
+      ln.append(el("li", {}, [el("div", { class: "when", text: fmtDate(n.date) }), what]));
+    }
+    $("empty-news").hidden = news.length > 0;
+  }
+
+  fetch("data.json?_=" + Date.now(), { cache: "no-store" })
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(render)
+    .catch(() => {
+      $("count").textContent = "?";
+      $("count-note").replaceChildren(el("span", { class: "err", text: "Couldn’t load the latest data. Try reloading the page." }));
+    });
+</script>
+</body>
+</html>
