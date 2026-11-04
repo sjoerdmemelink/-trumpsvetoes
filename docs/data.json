@@ -1,14 +1,17 @@
 {
   "start_date": "2026-11-04",
-  "updated_at": "2026-11-04T13:35:13Z",
+  "updated_at": "2026-11-04T13:44:49Z",
   "vetoes": [],
   "threats": [],
   "news": [],
+  "review": [],
   "checks": {
     "senate": "failed: 403 Client Error: Forbidden for url: https://www.senate.gov/legislative/vetoes/TrumpDJ2.htm",
     "ballotpedia (backup)": "failed: Ballotpedia layout changed: no dated veto entries found (got 'no title', 0 bytes)",
     "whitehouse feed (backup)": "ok",
     "truth": "ok",
-    "news": "ok"
+    "news": "ok",
+    "congress.gov api": "ok",
+    "congress.gov enrichment": "ok (0 filled in)"
   }
 }
