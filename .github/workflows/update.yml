@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "17 6 * * *"      # every day at 06:17 UTC
   workflow_dispatch:           # lets you run it by hand from the Actions tab
+    inputs:
+      post_intro:
+        description: "Post the one-time introduction message on X and Bluesky (also tests the keys)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -27,18 +32,32 @@ jobs:
       - run: pip install -r scripts/requirements.txt
 
       - name: Run tests
-        run: python tests/test_parsers.py
+        run: |
+          python tests/test_parsers.py
+          python tests/test_social.py
 
       - name: Update data
         env:
           CONGRESS_API_KEY: ${{ secrets.CONGRESS_API_KEY }}
         run: python scripts/update_data.py
-        
+
+      - name: Post new items to X and Bluesky
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
+          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
+          SOCIAL_INTRO: ${{ inputs.post_intro && '1' || '0' }}
+        run: python scripts/social.py
+
       - name: Commit changes
         run: |
           git config user.name  "trumpsvetoes-bot"
           git config user.email "actions@users.noreply.github.com"
           git add docs/data.json
+          [ -f scripts/posted.json ] && git add scripts/posted.json
           if git diff --cached --quiet; then
             echo "No changes."
           else
