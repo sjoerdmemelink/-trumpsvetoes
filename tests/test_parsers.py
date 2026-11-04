@@ -134,6 +134,41 @@ def test_combine_vetoes():
     assert [v["bill"] for v in out] == ["S.6"], out
     print("combine_vetoes ok")
 
+
+CONGRESS_JSON = {"bills": [
+    {"congress": 119, "type": "HR", "number": "504", "title": "Old Bill", "latestAction": {"actionDate": "2025-12-29", "text": "Vetoed by President."}},
+    {"congress": 119, "type": "S", "number": "5", "title": "Test Spending Act", "latestAction": {"actionDate": "2026-11-20", "text": "Vetoed by President."}},
+    {"congress": 119, "type": "HJRES", "number": "7", "title": "Pocket Test", "latestAction": {"actionDate": "2026-12-28", "text": "Pocket Vetoed by President."}},
+    {"congress": 119, "type": "HR", "number": "9", "title": "Signed", "latestAction": {"actionDate": "2026-11-21", "text": "Became Public Law No: 119-9."}},
+]}
+
+def test_congress_api_parse():
+    v = u.parse_congress_bills(CONGRESS_JSON)
+    assert [x["bill"] for x in v] == ["S.5", "H.J.Res.7"], v
+    assert v[0]["url"] == "https://www.congress.gov/bill/119th-congress/senate-bill/5", v[0]
+    assert v[1]["url"].endswith("/house-joint-resolution/7"), v[1]
+    assert u.congress_for(__import__("datetime").date(2027, 2, 1)) == 120
+    assert u.congress_for(__import__("datetime").date(2026, 11, 4)) == 119
+    assert u.split_bill_label("H.J.Res.7") == ("HJRES", "7") and u.split_bill_label("S. 5") == ("S", "5")
+    print("congress api parse ok")
+
+def test_dedupe_prefers_status():
+    wh = {"date": "2026-11-20", "bill": "S. 5", "subject": u.GENERIC_SUBJECT, "status": "", "url": "https://www.whitehouse.gov/a"}
+    cg = u.parse_congress_bills(CONGRESS_JSON)[0]
+    out = u.combine_vetoes([], [wh, cg], complete=False, extra=[], hidden=set())
+    assert len(out) == 1 and out[0]["status"] == "Vetoed by President." and "congress.gov" in out[0]["url"], out
+    print("dedupe ok")
+
+def test_redact_and_review():
+    assert u.redact("error for url: https://x?api_key=SECRET123", "SECRET123") == "error for url: https://x?api_key=***"
+    feed = """<?xml version="1.0"?><rss><channel>
+    <item><title>Memorandum of Disapproval for H.R. 12 (veto)</title><link>https://wh/a</link><pubDate>Fri, 20 Nov 2026 20:00:00 +0000</pubDate></item>
+    <item><title>Congressional Bill S. 5 Vetoed</title><link>https://wh/b</link><pubDate>Fri, 20 Nov 2026 20:00:00 +0000</pubDate></item>
+    </channel></rss>"""
+    r = u.whitehouse_unmatched(feed)
+    assert [x["url"] for x in r] == ["https://wh/a"], r
+    print("redact + review ok")
+
 if __name__ == "__main__":
-    test_senate(); test_ballotpedia(); test_ballotpedia_tolerant(); test_whitehouse(); test_combine_vetoes(); test_truth(); test_news(); test_threat_regex(); test_layout_change_detected()
+    test_senate(); test_ballotpedia(); test_ballotpedia_tolerant(); test_whitehouse(); test_combine_vetoes(); test_congress_api_parse(); test_dedupe_prefers_status(); test_redact_and_review(); test_truth(); test_news(); test_threat_regex(); test_layout_change_detected()
     print("ALL OK")
