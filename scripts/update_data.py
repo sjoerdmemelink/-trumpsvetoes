@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -253,6 +254,130 @@ def parse_whitehouse_feed(xml_text: str) -> list[dict]:
 
 
 # --------------------------------------------------------------------------------------
+# 1d. Congress.gov API (optional, needs a free key in CONGRESS_API_KEY)
+#     - finds vetoed bills ("Vetoed by President", "Pocket vetoed"), including pocket vetoes
+#     - fills in the bill title and latest action for vetoes found via other sources
+# --------------------------------------------------------------------------------------
+
+CONGRESS_API = "https://api.congress.gov/v3"
+TYPE_LABEL = {"HR": "H.R.", "S": "S.", "HJRES": "H.J.Res.", "SJRES": "S.J.Res.", "HCONRES": "H.Con.Res.", "SCONRES": "S.Con.Res."}
+TYPE_SLUG = {"HR": "house-bill", "S": "senate-bill", "HJRES": "house-joint-resolution",
+             "SJRES": "senate-joint-resolution", "HCONRES": "house-concurrent-resolution",
+             "SCONRES": "senate-concurrent-resolution"}
+LABEL_TO_TYPE = {v.replace(".", "").upper(): k for k, v in TYPE_LABEL.items()}  # "HR"->"HR", "HJRES"->"HJRES"
+VETO_ACTION_RE = re.compile(r"^\s*(?:vetoed by president|pocket vetoed)", re.I)
+GENERIC_SUBJECT = "Veto announced by the White House"
+
+
+def congress_for(d: date) -> int:
+    """Congress number for a date (119th = 2025-2026, 120th = 2027-2028)."""
+    return (d.year - 1789) // 2 + 1
+
+
+def ordinal(n: int) -> str:
+    suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+def congress_bill_url(congress: int, type_code: str, number: str) -> str:
+    return f"https://www.congress.gov/bill/{ordinal(congress)}-congress/{TYPE_SLUG[type_code]}/{number}"
+
+
+def split_bill_label(label: str) -> tuple[str, str] | None:
+    m = re.match(r"^\s*([A-Za-z.]+?)\s*(\d+)\s*$", label or "")
+    if not m:
+        return None
+    t = LABEL_TO_TYPE.get(m.group(1).replace(".", "").upper())
+    return (t, m.group(2)) if t else None
+
+
+def bill_key(item: dict) -> str:
+    d = date.fromisoformat(item["date"])
+    return re.sub(r"[^A-Z0-9]", "", item["bill"].upper()) + f"@{congress_for(d)}"
+
+
+def redact(msg: str, key: str) -> str:
+    return msg.replace(key, "***") if key else msg
+
+
+def parse_congress_bills(data: dict) -> list[dict]:
+    out: list[dict] = []
+    for b in data.get("bills", []):
+        la = b.get("latestAction") or {}
+        text, adate = la.get("text", ""), la.get("actionDate", "")
+        t = str(b.get("type", "")).upper()
+        if not (VETO_ACTION_RE.match(text) and adate >= START_DATE.isoformat() and t in TYPE_LABEL):
+            continue
+        number = str(b.get("number", ""))
+        out.append({
+            "date": adate,
+            "bill": f"{TYPE_LABEL[t]}{number}",
+            "subject": clean(b.get("title", "")),
+            "status": clean(text),
+            "url": congress_bill_url(int(b.get("congress", congress_for(date.fromisoformat(adate)))), t, number),
+        })
+    return out
+
+
+def fetch_congress_vetoes(key: str) -> list[dict]:
+    out: list[dict] = []
+    offset = 0
+    while offset < 5000:
+        url = (f"{CONGRESS_API}/bill?format=json&limit=250&offset={offset}&sort=updateDate+desc"
+               f"&fromDateTime={START_DATE.isoformat()}T00:00:00Z&api_key={key}")
+        data = json.loads(http_get(url))
+        out += parse_congress_bills(data)
+        if len(data.get("bills", [])) < 250:
+            break
+        offset += 250
+    return out
+
+
+def enrich_from_congress(vetoes: list[dict], key: str) -> tuple[int, int]:
+    """Fill in title and latest action for vetoes that only have a generic description."""
+    done = failed = 0
+    for v in vetoes:
+        if v.get("status") and v.get("subject") and v["subject"] != GENERIC_SUBJECT:
+            continue
+        parts = split_bill_label(v["bill"])
+        if not parts:
+            continue
+        t, number = parts
+        congress = congress_for(date.fromisoformat(v["date"]))
+        try:
+            data = json.loads(http_get(f"{CONGRESS_API}/bill/{congress}/{t.lower()}/{number}?format=json&api_key={key}"))
+            bill = data["bill"]
+            la = bill.get("latestAction") or {}
+            v["subject"] = clean(bill.get("title", "")) or v["subject"]
+            v["status"] = clean(f"{la.get('text', '')}".strip()) or v.get("status", "")
+            v["url"] = congress_bill_url(congress, t, number)
+            done += 1
+        except Exception as e:  # noqa: BLE001
+            failed += 1
+            log(f"WARNING enrich {v['bill']}: {redact(str(e), key)}")
+    return done, failed
+
+
+def whitehouse_unmatched(xml_text: str) -> list[dict]:
+    """Feed items that mention a veto but didn't match our strict 'Congressional Bill ... Vetoed' title.
+    These are not counted; they are written to data.json under 'review' so a human can look."""
+    from email.utils import parsedate_to_datetime
+
+    out = []
+    for item in ET.fromstring(xml_text).iter("item"):
+        title = clean(item.findtext("title") or "")
+        if "veto" not in title.lower() or WH_TITLE_RE.search(title):
+            continue
+        try:
+            d = parsedate_to_datetime(item.findtext("pubDate") or "").astimezone(ET_ZONE).date()
+        except (TypeError, ValueError):
+            continue
+        if d >= START_DATE:
+            out.append({"date": d.isoformat(), "title": title, "url": clean(item.findtext("link") or "")})
+    return out
+
+
+# --------------------------------------------------------------------------------------
 # 2. Trump's own posts (Trump's Truth archive)
 # --------------------------------------------------------------------------------------
 
@@ -385,7 +510,15 @@ def combine_vetoes(old: list[dict], new: list[dict], complete: bool, extra: list
     A partial source (a recent-items feed) only adds, so a veto never drops off the site
     just because it scrolled out of the feed."""
     base = [] if complete else old
-    out = merge_by_url(base, new + extra, 500, hidden)
+    merged = merge_by_url(base, new + extra, 500, hidden)
+    best: dict[str, dict] = {}
+    for v in merged:
+        k = bill_key(v)
+        cur = best.get(k)
+        score = (bool(v.get("status")), "congress.gov" in v.get("url", ""))
+        if cur is None or score > (bool(cur.get("status")), "congress.gov" in cur.get("url", "")):
+            best[k] = v
+    out = list(best.values())
     out.sort(key=lambda v: (v["date"], v["bill"]))
     return out
 
@@ -397,6 +530,8 @@ def run(dry_run: bool) -> int:
     checks: dict[str, str] = {}
 
     vetoes = old.get("vetoes", [])
+    review = old.get("review", [])
+    api_key = os.environ.get("CONGRESS_API_KEY", "").strip()
     try:
         vetoes = parse_senate(http_get(SENATE_URL, SENATE_HEADERS))
         checks["senate"] = "ok"
@@ -414,7 +549,9 @@ def run(dry_run: bool) -> int:
         if checks.get("ballotpedia (backup)") != "ok":
             for url in WH_FEEDS:
                 try:
-                    vetoes = parse_whitehouse_feed(http_get(url))
+                    wh_text = http_get(url)
+                    vetoes = parse_whitehouse_feed(wh_text)
+                    review = whitehouse_unmatched(wh_text)
                     checks["whitehouse feed (backup)"] = "ok"
                     break
                 except Exception as e3:  # noqa: BLE001
@@ -443,8 +580,22 @@ def run(dry_run: bool) -> int:
         log("ERROR: every source failed; leaving data.json untouched.")
         return 1
 
+    congress_items: list[dict] = []
+    if api_key:
+        try:
+            congress_items = fetch_congress_vetoes(api_key)
+            checks["congress.gov api"] = "ok"
+        except Exception as e:  # noqa: BLE001
+            checks["congress.gov api"] = "failed: " + redact(str(e), api_key)
+            log("WARNING congress.gov: " + redact(str(e), api_key))
+    else:
+        checks["congress.gov api"] = "skipped: no CONGRESS_API_KEY set"
+
     complete = checks.get("senate") == "ok" or checks.get("ballotpedia (backup)") == "ok"
-    vetoes = combine_vetoes(old.get("vetoes", []), vetoes, complete, manual.get("add_vetoes", []), hidden)
+    vetoes = combine_vetoes(old.get("vetoes", []), vetoes + congress_items, complete, manual.get("add_vetoes", []), hidden)
+    if api_key:
+        done, failed = enrich_from_congress(vetoes, api_key)
+        checks["congress.gov enrichment"] = f"ok ({done} filled in)" if not failed else f"partial ({done} ok, {failed} failed)"
     threats = merge_by_url(old.get("threats", []), new_threats + manual.get("add_threats", []), MAX_THREATS, hidden)
 
     data = {
@@ -453,11 +604,16 @@ def run(dry_run: bool) -> int:
         "vetoes": vetoes,
         "threats": threats,
         "news": [n for n in news if n["url"] not in hidden],
+        "review": review,
         "checks": checks,
     }
 
     added_threats = [t for t in threats if t not in old.get("threats", [])]
     log(f"checks: {checks}")
+    if review:
+        log(f"REVIEW: {len(review)} White House item(s) mention a veto but did not match the strict pattern:")
+        for r in review:
+            log(f"  {r['date']} {r['title']} <{r['url']}>")
     log(f"vetoes: {len(vetoes)}  threats: {len(threats)} (+{len(added_threats)} new)  news: {len(data['news'])}")
     for t in added_threats:
         log(f"  NEW THREAT {t['date']}: {t['text'][:100]}  <{t['url']}>")
