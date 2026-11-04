@@ -119,6 +119,21 @@ def test_whitehouse():
     assert [x["bill"] for x in v] == ["S. 5"], v
     print("whitehouse feed ok:", v[0]["bill"], v[0]["date"])
 
+
+def test_combine_vetoes():
+    a = {"date": "2026-11-20", "bill": "S.5", "subject": "x", "status": "", "url": "https://x/a"}
+    b = {"date": "2026-12-01", "bill": "S.6", "subject": "y", "status": "", "url": "https://x/b"}
+    # partial source (feed) that no longer lists A: A must stay
+    out = u.combine_vetoes([a], [b], complete=False, extra=[], hidden=set())
+    assert [v["bill"] for v in out] == ["S.5", "S.6"], out
+    # complete source replaces the list
+    out = u.combine_vetoes([a], [b], complete=True, extra=[], hidden=set())
+    assert [v["bill"] for v in out] == ["S.6"], out
+    # hidden urls disappear, manual additions appear
+    out = u.combine_vetoes([a], [b], complete=False, extra=[], hidden={"https://x/a"})
+    assert [v["bill"] for v in out] == ["S.6"], out
+    print("combine_vetoes ok")
+
 if __name__ == "__main__":
-    test_senate(); test_ballotpedia(); test_ballotpedia_tolerant(); test_whitehouse(); test_truth(); test_news(); test_threat_regex(); test_layout_change_detected()
+    test_senate(); test_ballotpedia(); test_ballotpedia_tolerant(); test_whitehouse(); test_combine_vetoes(); test_truth(); test_news(); test_threat_regex(); test_layout_change_detected()
     print("ALL OK")
