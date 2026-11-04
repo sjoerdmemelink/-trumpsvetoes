@@ -74,6 +74,51 @@ def test_layout_change_detected():
     except ValueError: pass
     print("layout-change detection ok")
 
+
+BALLOTPEDIA = """<html><body><h2><span>Trump's vetoes</span></h2>
+<p>intro</p><ul>
+<li><b>November 20, 2026</b>:<ul>
+<li><a href="https://www.congress.gov/bill/119th-congress/senate-bill/5">S.5 - Test Spending Act</a>.<sup>[2]</sup></li>
+<li><a href="https://www.congress.gov/bill/119th-congress/house-bill/77">H.R. 77 \u2013 Another Test Act</a></li></ul></li>
+<li><b>December 29, 2025</b>:<ul><li><a href="https://www.congress.gov/bill/119th-congress/house-bill/131">H.R.131 - Finish the Arkansas Valley Conduit Act</a></li></ul></li>
+</ul><h2>Summary of Trump's vetoes</h2></body></html>"""
+
+def test_ballotpedia():
+    v = u.parse_ballotpedia(BALLOTPEDIA)
+    assert [x["bill"] for x in v] == ["H.R. 77", "S.5"], v
+    assert v[1]["subject"] == "Test Spending Act", v[1]
+    for bad in ["<html><body>nothing</body></html>", "<h2>Trump's vetoes</h2>"]:
+        try:
+            u.parse_ballotpedia(bad); raise SystemExit("should have raised")
+        except ValueError: pass
+    print("ballotpedia ok:", [x["bill"] for x in v])
+
+
+BP_WITH_EDIT = """<html><head><title>Donald Trump: Vetoed legislation</title></head><body>
+<h2><span class="mw-headline">Trump's vetoes</span><span class="mw-editsection">[edit]</span></h2>
+<ul><li><b>November 25, 2026</b>:<ul><li><a href="http://www.congress.gov/bill/119th-congress/senate-bill/9">S.9 - Edit Marker Act</a></li></ul></li></ul></body></html>"""
+
+WH_FEED = """<?xml version="1.0"?><rss><channel>
+<item><title>Congressional Bill H.R. 504 Vetoed</title><link>https://www.whitehouse.gov/briefings-statements/2025/12/congressional-bill-h-r-504-vetoed/</link><pubDate>Tue, 30 Dec 2025 01:00:00 +0000</pubDate></item>
+<item><title>Congressional Bill S. 5 Vetoed</title><link>https://www.whitehouse.gov/briefings-statements/2026/11/congressional-bill-s-5-vetoed/</link><pubDate>Fri, 20 Nov 2026 20:00:00 +0000</pubDate></item>
+<item><title>Something else entirely</title><link>https://www.whitehouse.gov/x/</link><pubDate>Fri, 20 Nov 2026 20:00:00 +0000</pubDate></item>
+</channel></rss>"""
+
+def test_ballotpedia_tolerant():
+    v = u.parse_ballotpedia(BP_WITH_EDIT)
+    assert [x["bill"] for x in v] == ["S.9"], v
+    try:
+        u.parse_ballotpedia("<html><head><title>Just a moment...</title></head><body>challenge</body></html>")
+        raise SystemExit("should have raised")
+    except ValueError as e:
+        assert "Just a moment" in str(e), e
+    print("ballotpedia tolerant + diagnostics ok")
+
+def test_whitehouse():
+    v = u.parse_whitehouse_feed(WH_FEED)
+    assert [x["bill"] for x in v] == ["S. 5"], v
+    print("whitehouse feed ok:", v[0]["bill"], v[0]["date"])
+
 if __name__ == "__main__":
-    test_senate(); test_truth(); test_news(); test_threat_regex(); test_layout_change_detected()
+    test_senate(); test_ballotpedia(); test_ballotpedia_tolerant(); test_whitehouse(); test_truth(); test_news(); test_threat_regex(); test_layout_change_detected()
     print("ALL OK")
