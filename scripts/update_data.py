@@ -42,6 +42,17 @@ NEWS_URL = (
     "q=Trump+veto+threat+when:14d&hl=en-US&gl=US&ceid=US:en"
 )
 USER_AGENT = "trumpsvetoes.com daily updater (contact: see site footer)"
+# senate.gov rejects bare bot user agents (HTTP 403), so identify as a normal, honest HTTP client:
+SENATE_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; trumpsvetoes-bot/1.0; +https://trumpsvetoes.com)",
+    "Accept": "text/html,application/xhtml+xml",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+BALLOTPEDIA_URLS = [
+    "https://ballotpedia.org/Donald_Trump:_Vetoed_legislation,_2025-2026",
+    "https://ballotpedia.org/Donald_Trump:_Vetoed_legislation,_2025-2027",
+    "https://ballotpedia.org/Donald_Trump:_Vetoed_legislation",
+]
 TIMEOUT = 30
 
 MAX_THREATS = 100
@@ -63,8 +74,8 @@ def log(msg: str) -> None:
     print(msg, flush=True)
 
 
-def http_get(url: str) -> str:
-    r = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT)
+def http_get(url: str, headers: dict | None = None) -> str:
+    r = requests.get(url, headers=headers or {"User-Agent": USER_AGENT}, timeout=TIMEOUT)
     r.raise_for_status()
     return r.text
 
@@ -140,6 +151,57 @@ def parse_senate(html: str) -> list[dict]:
     # Sanity check: the page lists the two 2025 vetoes, so we must have seen bill rows.
     if not found_any_row:
         raise ValueError("Senate page layout changed: no bill rows found")
+    out.sort(key=lambda v: (v["date"], v["bill"]))
+    return out
+
+
+# --------------------------------------------------------------------------------------
+# 1b. Backup source for vetoes: Ballotpedia (cites the Senate record)
+# --------------------------------------------------------------------------------------
+
+BP_DATE_RE = re.compile(r"[A-Z][a-z]+ \d{1,2}, \d{4}")
+BP_BILL_RE = re.compile(r"^((?:H|S)\.[A-Za-z. ]*\d+)\s*[-\u2013\u2014]\s*(.+)$")
+
+
+def parse_ballotpedia(html: str) -> list[dict]:
+    """Return vetoes dated on/after START_DATE from Ballotpedia's 'Trump's vetoes' list."""
+    soup = BeautifulSoup(html, "html.parser")
+    heading = None
+    for h in soup.find_all(["h2", "h3"]):
+        if re.match(r"^\s*Trump.s vetoes\s*$", h.get_text()):
+            heading = h
+            break
+    if heading is None:
+        raise ValueError("Ballotpedia layout changed: 'Trump's vetoes' heading not found")
+    ul = heading.find_next("ul")
+    if ul is None:
+        raise ValueError("Ballotpedia layout changed: no list after heading")
+
+    seen_any_date = False
+    out: list[dict] = []
+    for li in ul.find_all("li", recursive=False):
+        strong = li.find(["b", "strong"])
+        m = BP_DATE_RE.search(strong.get_text() if strong else "")
+        if not m:
+            continue
+        seen_any_date = True
+        vdate = datetime.strptime(m.group(0), "%B %d, %Y").date()
+        if vdate < START_DATE:
+            continue
+        for sub in li.find_all("li"):
+            a = sub.find("a", href=True)
+            bm = BP_BILL_RE.match(clean(a.get_text())) if a else None
+            if not bm:
+                continue
+            out.append({
+                "date": vdate.isoformat(),
+                "bill": clean(bm.group(1)),
+                "subject": clean(bm.group(2)),
+                "status": "",
+                "url": https(a["href"]),
+            })
+    if not seen_any_date:
+        raise ValueError("Ballotpedia layout changed: no dated entries found")
     out.sort(key=lambda v: (v["date"], v["bill"]))
     return out
 
@@ -280,11 +342,19 @@ def run(dry_run: bool) -> int:
 
     vetoes = old.get("vetoes", [])
     try:
-        vetoes = parse_senate(http_get(SENATE_URL))
+        vetoes = parse_senate(http_get(SENATE_URL, SENATE_HEADERS))
         checks["senate"] = "ok"
     except Exception as e:  # noqa: BLE001
         checks["senate"] = f"failed: {e}"
         log(f"WARNING senate: {e}")
+        for url in BALLOTPEDIA_URLS:
+            try:
+                vetoes = parse_ballotpedia(http_get(url))
+                checks["ballotpedia (backup)"] = "ok"
+                break
+            except Exception as e2:  # noqa: BLE001
+                checks["ballotpedia (backup)"] = f"failed: {e2}"
+                log(f"WARNING ballotpedia ({url}): {e2}")
 
     new_threats: list[dict] = []
     for url in TRUTH_URLS:
@@ -304,7 +374,7 @@ def run(dry_run: bool) -> int:
         checks["news"] = f"failed: {e}"
         log(f"WARNING news: {e}")
 
-    if all(v != "ok" for v in checks.values()):
+    if not any(v == "ok" for v in checks.values()):
         log("ERROR: every source failed; leaving data.json untouched.")
         return 1
 
