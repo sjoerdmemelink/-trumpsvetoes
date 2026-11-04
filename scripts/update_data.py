@@ -163,36 +163,41 @@ BP_DATE_RE = re.compile(r"[A-Z][a-z]+ \d{1,2}, \d{4}")
 BP_BILL_RE = re.compile(r"^((?:H|S)\.[A-Za-z. ]*\d+)\s*[-\u2013\u2014]\s*(.+)$")
 
 
-def parse_ballotpedia(html: str) -> list[dict]:
-    """Return vetoes dated on/after START_DATE from Ballotpedia's 'Trump's vetoes' list."""
-    soup = BeautifulSoup(html, "html.parser")
-    heading = None
-    for h in soup.find_all(["h2", "h3"]):
-        if re.match(r"^\s*Trump.s vetoes\s*$", h.get_text()):
-            heading = h
-            break
-    if heading is None:
-        raise ValueError("Ballotpedia layout changed: 'Trump's vetoes' heading not found")
-    ul = heading.find_next("ul")
-    if ul is None:
-        raise ValueError("Ballotpedia layout changed: no list after heading")
+def describe_page(soup: BeautifulSoup, html: str) -> str:
+    title = clean(soup.title.get_text()) if soup.title else "no title"
+    return f"(got '{title[:80]}', {len(html)} bytes)"
 
-    seen_any_date = False
+
+def parse_ballotpedia(html: str) -> list[dict]:
+    """Return vetoes dated on/after START_DATE from Ballotpedia.
+
+    Looks for list items shaped like:  <li><b>December 29, 2025</b>: <ul><li><a>H.R.131 - Title</a></li></ul></li>
+    anywhere on the page, so it doesn't depend on the exact heading text.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    seen_any = False
     out: list[dict] = []
-    for li in ul.find_all("li", recursive=False):
-        strong = li.find(["b", "strong"])
+    for li in soup.find_all("li"):
+        strong = li.find(["b", "strong"], recursive=False)
         m = BP_DATE_RE.search(strong.get_text() if strong else "")
         if not m:
             continue
-        seen_any_date = True
-        vdate = datetime.strptime(m.group(0), "%B %d, %Y").date()
-        if vdate < START_DATE:
-            continue
+        subs = []
         for sub in li.find_all("li"):
             a = sub.find("a", href=True)
             bm = BP_BILL_RE.match(clean(a.get_text())) if a else None
-            if not bm:
-                continue
+            if bm:
+                subs.append((a, bm))
+        if not subs:
+            continue
+        try:
+            vdate = datetime.strptime(m.group(0), "%B %d, %Y").date()
+        except ValueError:
+            continue
+        seen_any = True
+        if vdate < START_DATE:
+            continue
+        for a, bm in subs:
             out.append({
                 "date": vdate.isoformat(),
                 "bill": clean(bm.group(1)),
@@ -200,8 +205,49 @@ def parse_ballotpedia(html: str) -> list[dict]:
                 "status": "",
                 "url": https(a["href"]),
             })
-    if not seen_any_date:
-        raise ValueError("Ballotpedia layout changed: no dated entries found")
+    if not seen_any:
+        raise ValueError("Ballotpedia layout changed: no dated veto entries found " + describe_page(soup, html))
+    out.sort(key=lambda v: (v["date"], v["bill"]))
+    return out
+
+
+# --------------------------------------------------------------------------------------
+# 1c. Second backup: White House announcements "Congressional Bill H.R. 504 Vetoed"
+# --------------------------------------------------------------------------------------
+
+WH_FEEDS = [
+    "https://www.whitehouse.gov/briefings-statements/feed/",
+    "https://www.whitehouse.gov/feed/",
+]
+WH_TITLE_RE = re.compile(r"Congressional Bill\s+(.+?)\s+Vetoed", re.I)
+
+
+def parse_whitehouse_feed(xml_text: str) -> list[dict]:
+    from email.utils import parsedate_to_datetime
+
+    root = ET.fromstring(xml_text)
+    items = list(root.iter("item"))
+    if not items:
+        raise ValueError("White House feed has no items")
+    out: list[dict] = []
+    for item in items:
+        title = clean(item.findtext("title") or "")
+        m = WH_TITLE_RE.search(title)
+        if not m:
+            continue
+        try:
+            d = parsedate_to_datetime(item.findtext("pubDate") or "").astimezone(ET_ZONE).date()
+        except (TypeError, ValueError):
+            continue
+        if d < START_DATE:
+            continue
+        out.append({
+            "date": d.isoformat(),
+            "bill": clean(m.group(1)),
+            "subject": "Veto announced by the White House",
+            "status": "",
+            "url": clean(item.findtext("link") or ""),
+        })
     out.sort(key=lambda v: (v["date"], v["bill"]))
     return out
 
@@ -355,6 +401,15 @@ def run(dry_run: bool) -> int:
             except Exception as e2:  # noqa: BLE001
                 checks["ballotpedia (backup)"] = f"failed: {e2}"
                 log(f"WARNING ballotpedia ({url}): {e2}")
+        if checks.get("ballotpedia (backup)") != "ok":
+            for url in WH_FEEDS:
+                try:
+                    vetoes = parse_whitehouse_feed(http_get(url))
+                    checks["whitehouse feed (backup)"] = "ok"
+                    break
+                except Exception as e3:  # noqa: BLE001
+                    checks["whitehouse feed (backup)"] = f"failed: {e3}"
+                    log(f"WARNING whitehouse ({url}): {e3}")
 
     new_threats: list[dict] = []
     for url in TRUTH_URLS:
