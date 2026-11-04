@@ -1,11 +1,12 @@
 {
   "start_date": "2026-11-04",
-  "updated_at": "2026-11-04T12:41:59Z",
+  "updated_at": "2026-11-04T12:53:57Z",
   "vetoes": [],
   "threats": [],
   "news": [],
   "checks": {
     "senate": "failed: 403 Client Error: Forbidden for url: https://www.senate.gov/legislative/vetoes/TrumpDJ2.htm",
+    "ballotpedia (backup)": "failed: Ballotpedia layout changed: 'Trump's vetoes' heading not found",
     "truth": "ok",
     "news": "ok"
   }
