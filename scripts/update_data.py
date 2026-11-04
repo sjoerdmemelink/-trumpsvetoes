@@ -380,6 +380,16 @@ def merge_by_url(old: list[dict], new: list[dict], limit: int, hidden: set[str])
     return sorted(merged.values(), key=lambda x: (x["date"], x["url"]), reverse=True)[:limit]
 
 
+def combine_vetoes(old: list[dict], new: list[dict], complete: bool, extra: list[dict], hidden: set[str]) -> list[dict]:
+    """A complete source (Senate list, Ballotpedia) replaces what we had.
+    A partial source (a recent-items feed) only adds, so a veto never drops off the site
+    just because it scrolled out of the feed."""
+    base = [] if complete else old
+    out = merge_by_url(base, new + extra, 500, hidden)
+    out.sort(key=lambda v: (v["date"], v["bill"]))
+    return out
+
+
 def run(dry_run: bool) -> int:
     old = load_json(DATA_PATH, {"vetoes": [], "threats": [], "news": []})
     manual = load_json(MANUAL_PATH, {})
@@ -433,8 +443,8 @@ def run(dry_run: bool) -> int:
         log("ERROR: every source failed; leaving data.json untouched.")
         return 1
 
-    vetoes = merge_by_url([], vetoes + manual.get("add_vetoes", []), 500, hidden)
-    vetoes.sort(key=lambda v: (v["date"], v["bill"]))
+    complete = checks.get("senate") == "ok" or checks.get("ballotpedia (backup)") == "ok"
+    vetoes = combine_vetoes(old.get("vetoes", []), vetoes, complete, manual.get("add_vetoes", []), hidden)
     threats = merge_by_url(old.get("threats", []), new_threats + manual.get("add_threats", []), MAX_THREATS, hidden)
 
     data = {
