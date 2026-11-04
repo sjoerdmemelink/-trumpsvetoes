@@ -76,38 +76,21 @@
   }
   .wrap { max-width: 64rem; margin: 0 auto; padding: 0 1.25rem; }
 
-  /* ---------- Header ---------- */
-  header.top { padding: 1.5rem 0 0; }
-  .site-name {
-    font-family: var(--ui);
-    font-weight: 700;
-    font-size: 0.95rem;
-    letter-spacing: 0.01em;
-    color: var(--muted);
-    margin: 0;
-  }
-
   /* ---------- Hero ---------- */
-  .hero { padding: 2rem 0 3rem; }
+  .hero { padding: 3.5rem 0 3.5rem; }
+  .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3rem; align-items: center; }
+  @media (max-width: 860px) { .hero { padding-top: 2.25rem; } .hero-grid { grid-template-columns: 1fr; gap: 2.25rem; } }
   h1 {
     font-family: var(--display);
     font-weight: 400;
-    font-size: clamp(2.6rem, 8vw, 5.2rem);
+    font-size: clamp(3rem, 8vw, 6rem);
     line-height: 0.95;
-    margin: 0 0 1rem;
-    max-width: 14ch;
+    margin: 0 0 1.25rem;
     letter-spacing: 0.005em;
   }
-  .lede { max-width: 34rem; color: var(--muted); margin: 0 0 2.5rem; font-size: 1.125rem; }
+  .lede { max-width: 30rem; color: var(--muted); margin: 0; font-size: 1.125rem; }
 
-  .stage {
-    position: relative;
-    display: grid;
-    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-    gap: 1.5rem;
-    align-items: start;
-  }
-  @media (max-width: 760px) { .stage { grid-template-columns: 1fr; } }
+  .stage { position: relative; }
 
   .bill {
     position: relative;
@@ -183,14 +166,16 @@
     transform: rotate(1.4deg);
     box-shadow: 0 12px 24px -16px rgba(16, 27, 45, 0.6);
     font-family: var(--ui);
-    align-self: start;
-    margin-top: 1.5rem;
+    margin: -1.1rem 0 0 auto;
+    width: min(100%, 21rem);
+    position: relative;
+    z-index: 2;
   }
   .note .n { font-family: var(--display); font-size: clamp(4rem, 12vw, 6rem); line-height: 0.9; margin: 0; }
   .note p { margin: 0.35rem 0 0; font-size: 0.95rem; line-height: 1.45; }
   .note strong { font-weight: 700; }
 
-  .meta { font-family: var(--ui); font-size: 0.875rem; color: var(--muted); margin: 2.25rem 0 0; }
+  .meta { font-family: var(--ui); font-size: 0.875rem; color: var(--muted); margin: 1.5rem 0 0; }
 
   /* ---------- Logs ---------- */
   section.block { padding: 2.5rem 0; border-top: 1px solid var(--rule); }
@@ -277,13 +262,15 @@
 </head>
 <body>
 
-<header class="top"><div class="wrap"><p class="site-name">trumpsvetoes.com</p></div></header>
-
 <main>
   <div class="wrap">
     <section class="hero" aria-labelledby="title">
-      <h1 id="title">Trump’s vetoes, counted.</h1>
-      <p class="lede">Every bill the President formally vetoes from November 4, 2026, the day after the midterms. Checked daily against official records.</p>
+      <div class="hero-grid">
+      <div class="hero-text">
+        <h1 id="title">Trump’s vetoes, counted.</h1>
+        <p class="lede">Every bill the President formally vetoes from November 4, 2026, the day after the midterms. Checked daily against official records.</p>
+        <p class="meta" id="meta"></p>
+      </div>
 
       <div class="stage" id="stage">
         <div class="bill" id="bill">
@@ -332,8 +319,7 @@
           <p><strong>veto threats on the record</strong> from Trump’s own posts and official statements. Headlines from the news are listed below but not counted.</p>
         </aside>
       </div>
-
-      <p class="meta" id="meta"></p>
+      </div>
     </section>
   </div>
 
