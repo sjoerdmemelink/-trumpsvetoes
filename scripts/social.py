@@ -104,11 +104,15 @@ def fit(text: str, limit: int) -> str:
 # X (official API v2, OAuth 1.0a user context)
 # --------------------------------------------------------------------------------------
 
+def env(name: str) -> str:
+    """Secret value without stray spaces or line breaks that sneak in when pasting."""
+    return os.environ.get(name, "").strip()
+
+
 def post_x(text: str) -> str:
     from requests_oauthlib import OAuth1
 
-    auth = OAuth1(os.environ["X_API_KEY"], os.environ["X_API_SECRET"],
-                  os.environ["X_ACCESS_TOKEN"], os.environ["X_ACCESS_SECRET"])
+    auth = OAuth1(env("X_API_KEY"), env("X_API_SECRET"), env("X_ACCESS_TOKEN"), env("X_ACCESS_SECRET"))
     r = requests.post("https://api.x.com/2/tweets", json={"text": fit(text, X_LIMIT)}, auth=auth, timeout=TIMEOUT)
     if r.status_code >= 300:
         raise RuntimeError(f"X answered {r.status_code}: {r.text[:300]}")
@@ -154,12 +158,24 @@ def post_bluesky(text: str, links: list[str], session: dict) -> str:
     return r.json().get("uri", "?")
 
 
+def bsky_identifier() -> str:
+    """Accepts 'name.bsky.social', '@name.bsky.social' or a did:plc: id."""
+    ident = env("BSKY_HANDLE").lstrip("@").strip()
+    return ident.lower() if not ident.startswith("did:") else ident
+
+
 def bsky_login() -> dict:
     r = requests.post("https://bsky.social/xrpc/com.atproto.server.createSession",
-                      json={"identifier": os.environ["BSKY_HANDLE"], "password": os.environ["BSKY_APP_PASSWORD"]},
+                      json={"identifier": bsky_identifier(), "password": env("BSKY_APP_PASSWORD")},
                       timeout=TIMEOUT)
     if r.status_code >= 300:
-        raise RuntimeError(f"Bluesky login failed ({r.status_code})")
+        try:
+            detail = r.json()
+            detail = f"{detail.get('error', '')}: {detail.get('message', '')}"
+        except ValueError:
+            detail = r.text[:200]
+        raise RuntimeError(f"Bluesky login failed ({r.status_code}) {detail} "
+                           f"[identifier used: {bsky_identifier()}, password length: {len(env('BSKY_APP_PASSWORD'))}]")
     return r.json()
 
 
