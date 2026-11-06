@@ -99,6 +99,16 @@ def test_intro_once():
     assert len(s.fit(s.INTRO_TEXT, 280)) == len(s.INTRO_TEXT) <= 280, len(s.INTRO_TEXT)
     print("intro posted once per platform ok")
 
+
+def test_identifier_cleanup():
+    os.environ["BSKY_HANDLE"] = "  @TrumpsVetoes.bsky.social \n"
+    assert s.bsky_identifier() == "trumpsvetoes.bsky.social", s.bsky_identifier()
+    os.environ["BSKY_HANDLE"] = "did:plc:AbC123 "
+    assert s.bsky_identifier() == "did:plc:AbC123"
+    os.environ["BSKY_APP_PASSWORD"] = "abcd-efgh-ijkl-mnop\n"
+    assert s.env("BSKY_APP_PASSWORD") == "abcd-efgh-ijkl-mnop"
+    print("identifier cleanup ok")
+
 if __name__ == "__main__":
-    test_messages(); test_facets_bytes(); test_first_run_posts_nothing(); test_new_item_posted_once_and_retry_on_failure(); test_skip_without_credentials(); test_max_per_run(); test_intro_once()
+    test_messages(); test_facets_bytes(); test_first_run_posts_nothing(); test_new_item_posted_once_and_retry_on_failure(); test_skip_without_credentials(); test_max_per_run(); test_intro_once(); test_identifier_cleanup()
     print("ALL SOCIAL OK")
