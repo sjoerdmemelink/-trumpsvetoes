@@ -1,9 +1,16 @@
 {
   "start_date": "2026-11-04",
-  "updated_at": "2026-11-10T14:55:16Z",
+  "updated_at": "2026-11-11T14:24:55Z",
   "vetoes": [],
   "threats": [],
-  "news": [],
+  "news": [
+    {
+      "date": "2026-11-10",
+      "title": "Blunt Rochester backs Democratic legislative push in face of Trump’s veto threat",
+      "outlet": "The Hill",
+      "url": "https://news.google.com/rss/articles/CBMimwFBVV95cUxOdFMtVzJVNmRIa0w3REh0VjVNVWNuRjJyY09lM3NERmpQQzNvZ2FpRmhsN094dTZlRmlfQWljOEhFV1hiR05pQ3F4ZFZCZTBXUzRnaXlOX2hsOU90S0FqSEFWcjFaVEhpUnd0bHBaNFJpWHlXaTQzQmhzM2lGVFY1anRqcXJ0ZlpFSkJ5Y2tfVXBBajdtRUlSWGxLWdIBoAFBVV95cUxQRmZQLThVRHNHZmZjbmRFZ2k2Q1VSdGxTekhxdjY1QlAybUp0MENCUzJEYUVpbkZjSm1iSjdFS2FTMkdiMWxxZ09NSTFlbklXT082UVNRYnlBUFVNUVZoSy1adFVYd2xGMF94a2VhYWEzWHZrclVXVjlIVm56TU1ZU21wWmtKbzBtUWpLeHJMbExOU3RpdU1fVmJob0ZOaVpl?oc=5"
+    }
+  ],
   "review": [],
   "checks": {
     "senate": "ok",
