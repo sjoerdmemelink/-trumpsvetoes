@@ -1,6 +1,6 @@
 {
   "start_date": "2026-11-04",
-  "updated_at": "2026-11-26T16:56:18Z",
+  "updated_at": "2026-11-27T16:41:38Z",
   "vetoes": [],
   "threats": [],
   "news": [
@@ -27,7 +27,7 @@
   "checks": {
     "senate": "ok",
     "truth": "ok",
-    "news": "ok",
+    "news": "failed: 429 Client Error: Too Many Requests for url: https://news.google.com/rss/search?q=Trump+veto+threat+when:14d&hl=en-US&gl=US&ceid=US:en",
     "congress.gov api": "ok",
     "congress.gov enrichment": "ok (0 filled in)"
   }
